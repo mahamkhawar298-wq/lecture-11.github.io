@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>🏛️ EduNexus · Virtual Suite</title>
+  <!-- Fonts, Icons, Charts, PDF -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --text: #1E293B;
+      --border: #E2E8F0;
+      --primary: #1E3E62;
+      --primary-light: #E9F0F9;
+      --accent: #FF6B35;
+      --card-bg: rgba(255,255,255,0.9);
+      --shadow: 0 8px 20px rgba(0,0,0,0.02);
+    }
+    body.dark {
+      --bg: #0B1120;
+      --surface: #1E293B;
+      --text: #F1F5F9;
+      --border: #334155;
+      --primary: #3B82F6;
+      --primary-light: #1E293B;
+      --accent: #F97316;
+      --card-bg: #1E293Bcc;
+    }
+    body { background: var(--bg); color: var(--text); display: flex; height: 100vh; transition: background 0.2s, color 0.2s; }
+    .sidebar { width: 300px; background: var(--surface); backdrop-filter: blur(12px); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:28px 0; overflow-y: auto; box-shadow: var(--shadow); transition: transform 0.25s ease; }
+    .sidebar.collapsed { transform: translateX(-100%); width: 0; padding: 0; border: none; }
+    .logo { padding:0 24px 28px; font-weight:700; font-size:1.8rem; display:flex; gap:12px; border-bottom:1px solid var(--border); color: var(--primary); }
+    .nav-item { display:flex; align-items:center; gap:14px; padding:14px 20px; border-radius:16px; margin:4px 12px; font-weight:500; background:transparent; border:none; color:var(--text); cursor:pointer; transition:0.15s; text-align:left; }
+    .nav-item i { width:24px; color: var(--primary); }
+    .nav-item.active { background:var(--primary); color:white; }
+    .nav-item.active i { color:white; }
+    .badge { background:var(--accent); color:white; border-radius:30px; padding:2px 10px; font-size:0.75rem; margin-left:auto; font-weight:600; }
+    .main-wrapper { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .top-bar { padding:16px 32px; backdrop-filter:blur(12px); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; box-shadow: var(--shadow); }
+    .hamburger { display: none; background: none; border: none; font-size: 1.8rem; color: var(--primary); cursor: pointer; margin-right: 16px; }
+    .content { flex:1; overflow-y:auto; padding:28px 32px; }
+    .view { display:none; } .view.active { display:block; }
+    .card { background: var(--card-bg); backdrop-filter:blur(4px); border-radius:28px; padding:24px; border:1px solid var(--border); margin-bottom:24px; box-shadow: var(--shadow); }
+    button { background:var(--primary); border:none; padding:10px 20px; border-radius:40px; font-weight:600; color:white; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:0.15s; border:1px solid transparent; }
+    button.outline { background:transparent; color:var(--text); border:1px solid var(--border); }
+    button.outline:hover { background: var(--primary-light); border-color: var(--primary); }
+    button.accent { background: var(--accent); }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    .flex { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .search, select, input, textarea { padding:10px 16px; border-radius:40px; border:1px solid var(--border); background:var(--surface); color:var(--text); }
+    textarea { border-radius:20px; }
+    table { width:100%; border-collapse:collapse; } td,th { padding:8px; text-align:left; }
+    .small { padding:4px 10px; font-size:0.8rem; }
+    .toast { position:fixed; bottom:30px; right:30px; background:var(--primary); color:white; padding:12px 24px; border-radius:60px; opacity:0; transition:0.2s; z-index:9999; box-shadow: 0 10px 25px rgba(0,0,0,0.15); pointer-events: none; }
+    .toast.show { opacity:1; pointer-events: none; }
+    .student-row, .announcement-item { background:var(--card-bg); border-radius:24px; padding:12px 20px; margin:8px 0; border:1px solid var(--border); display:flex; align-items:center; gap:15px; }
+    .loader { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .user-card { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .user-avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; }
+    .teacher-chip { background: var(--primary-light); padding: 8px 16px; border-radius: 40px; border: 1px solid var(--border); }
+    .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal { background:var(--surface); border-radius:32px; padding:28px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto; border:1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+    .modal-overlay.active { display:flex; }
+    .notification-bell { position:relative; cursor:pointer; font-size:1.5rem; margin-right:12px; color: var(--primary); }
+    .notification-dropdown { position:absolute; right:0; top:45px; width:340px; background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.1); padding:12px; z-index:500; display:none; max-height: 400px; overflow-y: auto; }
+    .notification-dropdown.show { display:block; }
+    .notification-item { padding:12px; border-bottom:1px solid var(--border); font-size:0.9rem; cursor: pointer; border-radius: 12px; transition: 0.1s; display: flex; justify-content: space-between; align-items: center; }
+    .notification-item:hover { background: var(--primary-light); }
+    .notification-item.unread { font-weight: 600; background: var(--primary-light); }
+    .pinned { border-left:6px solid var(--accent); background:var(--primary-light); }
+    .file-attach { font-size:0.8rem; background:var(--primary-light); border-radius:20px; padding:4px 12px; border:1px dashed var(--primary); }
+    .chart-container { position: relative; width: 100%; height: 200px; }
+    .chart-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-weight: 700; }
+    .clear-notif { font-size:0.75rem; margin-left:8px; color: var(--accent); cursor:pointer; }
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; z-index: 200; height: 100vh; width: 280px; }
+      .sidebar.collapsed { transform: translateX(-100%); width: 280px; }
+      .hamburger { display: block; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .top-bar { padding: 16px; }
+      .content { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body class="">
+  <div class="sidebar" id="sidebar">
+    <div class="logo"><i class="fas fa-graduation-cap" style="color:var(--accent);"></i> EduNexus</div>
+    <div style="flex:1;">
+      <button class="nav-item active" data-view="dashboard"><i class="fas fa-chart-pie"></i> Dashboard <span class="badge" id="pendingBadge">0</span></button>
+      <button class="nav-item" data-view="students"><i class="fas fa-user-graduate"></i> Students</button>
+      <button class="nav-item" data-view="attendance"><i class="fas fa-calendar-alt"></i> Attendance</button>
+      <button class="nav-item" data-view="subjects"><i class="fas fa-book"></i> Subjects & HW</button>
+      <button class="nav-item" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</button>
+      <button class="nav-item" data-view="studentProfile"><i class="fas fa-id-card"></i> Student Profile</button>
+      <button class="nav-item" data-view="analytics"><i class="fas fa-chart-line"></i> Analytics</button>
+      <button class="nav-item" data-view="randomUser"><i class="fas fa-user-plus"></i> Random User</button>
+    </div>
+    <div style="padding:20px;">
+      <button class="outline" id="themeToggle"><i class="fas fa-moon"></i> Dark mode</button>
+      <button class="outline" id="exportBackupBtn"><i class="fas fa-download"></i> Backup JSON</button>
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="top-bar">
+      <div class="flex">
+        <button class="hamburger" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+        <h2 id="viewTitle" style="color:var(--primary);">Dashboard</h2>
+      </div>
+      <div class="flex">
+        <div class="notification-bell" id="notificationBell">
+          <i class="far fa-bell"></i>
+          <span class="badge" id="notifCount" style="position:absolute; top:-8px; right:-8px; padding:2px 6px;">0</span>
+          <div class="notification-dropdown" id="notifDropdown">
+            <div style="display:flex; justify-content:space-between; padding:4px 4px 8px;">
+              <span><strong>Notifications</strong></span>
+              <button class="outline small" id="markAllReadBtn" style="padding:2px 8px;">✓ Mark all read</button>
+            </div>
+            <div id="notifListContainer"></div>
+          </div>
+        </div>
+        <div class="countdown" id="countdownDisplay" style="background:var(--primary-light); padding:6px 16px; border-radius:40px;">⏳ --:--:--</div>
+        <button id="undoBtn" class="outline" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+        <button id="redoBtn" class="outline" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div id="dashboardView" class="view active">
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="color:var(--primary);">📊 Attendance overview (Today)</h3>
+            <div class="chart-container">
+              <canvas id="attChart" height="200"></canvas>
+              <div id="chartCenterText" class="chart-center-text"></div>
+            </div>
+            <p style="margin-top:12px;">Rate: <span id="attRate" style="font-weight:700;">0%</span></p>
+          </div>
+          <div class="card"><h3 style="color:var(--accent);">⚠️ Most absent (all time)</h3><div id="mostAbsentList"></div></div>
+        </div>
+        <div class="card"><h3>📋 Pending assignments</h3><div id="pendingAssignments"></div></div>
+        <div class="card"><h3>📢 Recent Announcements</h3><div id="dashboardAnnouncements"></div></div>
+        <div class="card"><h3>⏱️ Next class countdown</h3>
+          <p>Set class start: <input type="time" id="classTimeInput" value="09:00" style="margin:0 10px;"> 
+          <button id="setCountdown" class="accent">Set</button></p>
+        </div>
+      </div>
+
+      <!-- STUDENTS -->
+      <div id="studentsView" class="view">
+        <div class="flex"><input type="text" id="studentSearch" placeholder="Search..." class="search">
+          <select id="attendanceFilter"><option value="all">All</option><option value="present">Present</option><option value="absent">Absent</option></select>
+          <button id="bulkImportBtn" class="outline"><i class="fas fa-upload"></i> Import JSON</button>
+        </div>
+        <div id="studentListContainer"></div>
+        <div class="pagination flex" id="paginationControls"></div>
+      </div>
+
+      <!-- ATTENDANCE -->
+      <div id="attendanceView" class="view">
+        <div class="card"><h3>📅 Weekly attendance</h3><div class="flex"><button id="prevWeek" class="outline">◀</button><span id="weekRange" style="font-weight:600;"></span><button id="nextWeek" class="outline">▶</button></div>
+        <div id="weekCalendar"></div></div>
+      </div>
+
+      <!-- SUBJECTS & HOMEWORK -->
+      <div id="subjectsView" class="view">
+        <div class="grid-2">
+          <div class="card">
+            <h3>📚 Subjects & Teachers</h3>
+            <div id="subjectsList"></div>
+            <div class="flex" style="margin-top:16px"><input id="newSubject" placeholder="Subject name" style="flex:1"><input id="newTeacher" placeholder="Teacher name" style="flex:1"></div>
+            <input id="newTeacherEmail" placeholder="Teacher email (optional)" style="width:100%; margin-top:8px">
+            <button id="addSubject" style="margin-top:12px" class="accent"><i class="fas fa-plus"></i> Add Subject</button>
+            <hr style="margin:20px 0; border-color:var(--border)">
+            <h4><i class="fas fa-chalkboard-user"></i> Teacher Directory</h4>
+            <div id="teacherList"></div>
+          </div>
+          <div class="card">
+            <h3>📝 Assignments & Files</h3>
+            <div id="assignmentsList"></div>
+            <input id="hwTitle" placeholder="Title" style="width:100%">
+            <input id="hwDue" type="date" style="width:100%; margin-top:8px">
+            <select id="hwSubject" style="width:100%; margin-top:8px"><option value="">Select subject</option></select>
+            <div style="margin-top:12px"><label><i class="fas fa-paperclip"></i> Teacher file (optional):</label>
+            <input type="file" id="hwTeacherFile" accept=".pdf,.doc,.docx,image/*"></div>
+            <button id="addAssignment" style="margin-top:12px" class="accent">Add Assignment</button>
+            <p class="small" style="margin-top:8px">Click "Submit" on assignment to upload student work.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS VIEW -->
+      <div id="announcementsView" class="view">
+        <div class="card">
+          <h3 style="color:var(--accent);"><i class="fas fa-bullhorn"></i> Announcements & Pinned</h3>
+          <button id="addAnnouncementBtn" class="outline" style="margin-bottom:20px"><i class="fas fa-plus"></i> New Announcement</button>
+          <div id="announcementsListContainer"></div>
+        </div>
+      </div>
+
+      <!-- STUDENT PROFILE -->
+      <div id="studentProfileView" class="view">
+        <div class="card">
+          <h3>👤 Student Profile</h3>
+          <div class="flex"><label>Select student:</label>
+          <select id="profileStudentSelect" class="search" style="min-width:220px"></select>
+          <button id="refreshProfileBtn" class="outline"><i class="fas fa-sync-alt"></i></button>
+          </div>
+          <div id="profileDetails" style="margin-top:24px"></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS (dynamic trend) -->
+      <div id="analyticsView" class="view">
+        <div class="card"><h3>📈 Attendance trend (last 7 days)</h3><canvas id="trendChart"></canvas></div>
+        <div class="card"><button id="exportChartPNG" class="outline">Export trend chart as PNG</button></div>
+      </div>
+
+      <!-- RANDOM USER -->
+      <div id="randomUserView" class="view">
+        <div class="card" style="max-width:500px; margin:0 auto;">
+          <h3 style="color:var(--accent);"><i class="fas fa-user-astronaut"></i> Random User Generator</h3>
+          <div id="randomUserContainer" class="user-card">
+            <div id="userLoading" style="display:none;"><div class="loader"></div> Loading...</div>
+            <div id="userDisplay">
+              <img id="userPic" class="user-avatar" src="" alt="user" style="display:none;">
+              <h4 id="userName"></h4>
+              <p id="userEmail"></p>
+              <p id="userLocation"></p>
+            </div>
+            <div class="flex">
+              <button id="loadRandomUserBtn" class="accent"><i class="fas fa-sync-alt"></i> Load Another</button>
+              <button id="addRandomToClassBtn" class="outline"><i class="fas fa-user-plus"></i> Add to Class</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal-overlay" id="studentModal"><div class="modal"><h3>Student details</h3><div id="modalBody"></div><button class="outline" onclick="document.getElementById('studentModal').classList.remove('active')">Close</button></div></div>
+  <div class="modal-overlay" id="announcementModal"><div class="modal"><h3>Post Announcement</h3><input id="annTitle" placeholder="Title" style="width:100%; margin-bottom:12px"><textarea id="annContent" placeholder="Write your announcement here..." rows="4" style="width:100%; margin-bottom:12px"></textarea><div><label><input type="checkbox" id="annPinned"> 📌 Pin this announcement</label></div><div class="flex" style="margin-top:16px"><button id="saveAnnouncement" class="accent">Post</button><button class="outline" onclick="document.getElementById('announcementModal').classList.remove('active')">Cancel</button></div></div></div>
+
+  <div id="toast" class="toast">Message</div>
+  <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+  <script>
+    (function(){
+      'use strict';
+      // ---------- STATE ----------
+      let students = [];
+      let attendance = {};
+      let subjects = [];
+      let assignments = [];
+      let announcements = [];
+      let notifications = [];
+      let historyStack = [[]]; let historyIndex = 0;
+      let currentWeekOffset = 0;
+      let theme = 'light';
+      let classStartTime = '09:00';
+      let studentPage = 1, pageSize = 5;
+      let currentRandomUser = null;
+
+      let attChartInstance = null, trendChartInstance = null;
+      
+      const toast = (msg) => { 
+        let t=document.getElementById('toast'); 
+        t.textContent=msg; 
+        t.classList.add('show'); 
+        setTimeout(()=>t.classList.remove('show'),2500); 
+      };
+      
+      function saveState() {
+        const data = { students, attendance, subjects, assignments, announcements, notifications };
+        localStorage.setItem('edunexus_data', JSON.stringify(data));
+        updateBadge(); updateNotifBadge();
+      }
+      
+      function addNotification(message) {
+        notifications.push({ id: Date.now()+'-'+Math.random(), message, read: false, timestamp: new Date().toLocaleString() });
+        if(notifications.length>30) notifications.shift();
+        saveState(); 
+        updateNotifBadge(); 
+        renderNotifications();
+        toast(message); // front-facing toast
+      }
+      
+      function generateSampleStudents() {
+        if (students.length > 0) return;
+        const sample = [
+          { name: 'Emma Watson', email: 'emma@class.com', picture: 'https://randomuser.me/api/portraits/women/44.jpg', country: 'UK', bio: 'Loves literature' },
+          { name: 'James Lee', email: 'james@class.com', picture: 'https://randomuser.me/api/portraits/men/32.jpg', country: 'USA', bio: 'Math enthusiast' },
+          { name: 'Sofia Garcia', email: 'sofia@class.com', picture: 'https://randomuser.me/api/portraits/women/63.jpg', country: 'Spain', bio: '' },
+          { name: 'Liam Chen', email: 'liam@class.com', picture: 'https://randomuser.me/api/portraits/men/79.jpg', country: 'China', bio: 'Coder' },
+          { name: 'Aisha Khan', email: 'aisha@class.com', picture: 'https://randomuser.me/api/portraits/women/90.jpg', country: 'India', bio: '' },
+        ];
+        sample.forEach((s, idx) => {
+          let id = 's' + (idx+1);
+          students.push({ id, ...s });
+          attendance[id] = {};
+          for (let i=0; i<10; i++) { let d = new Date(); d.setDate(d.getDate() - i); attendance[id][d.toISOString().slice(0,10)] = Math.random()>0.25?'present':'absent'; }
+        });
+        if(subjects.length===0) { subjects.push({id:'sub1', name:'Mathematics', teacher:'Dr. Adams', teacherEmail:'adams@school.edu'}); }
+        if(announcements.length===0) { announcements.push({id:'ann1', title:'Welcome to EduNexus!', content:'Your virtual classroom is ready.', timestamp:new Date().toISOString(), pinned:true}); }
+        saveState();
+      }
+
+      function loadState() {
+        try {
+          const d = localStorage.getItem('edunexus_data');
+          if(d) { let p=JSON.parse(d); students=p.students||[]; attendance=p.attendance||{}; subjects=p.subjects||[]; assignments=p.assignments||[]; announcements=p.announcements||[]; notifications=p.notifications||[]; }
+        } catch(e) {}
+        if(!students.length) generateSampleStudents();
+        students = students.map(s => ({ bio: s.bio || '', ...s }));
+        assignments = assignments.map(a => ({ teacherAttachment: a.teacherAttachment || null, submissions: a.submissions || {}, ...a }));
+        pushHistory();
+      }
+      
+      function pushHistory() { 
+        historyStack = historyStack.slice(0, historyIndex+1); 
+        historyStack.push(JSON.parse(JSON.stringify({students,attendance,subjects,assignments,announcements}))); 
+        historyIndex++; if(historyStack.length>30) historyStack.shift(); 
+      }
+      function undo() { if(historyIndex>0) { historyIndex--; restore(historyStack[historyIndex]); toast('Undo'); } }
+      function redo() { if(historyIndex<historyStack.length-1) { historyIndex++; restore(historyStack[historyIndex]); toast('Redo'); } }
+      function restore(snap) { students = snap.students; attendance = snap.attendance; subjects = snap.subjects; assignments = snap.assignments; announcements = snap.announcements; renderAll(); saveState(); }
+      
+      function getTodayStr() { return new Date().toISOString().slice(0,10); }
+      function markAttendance(studentId, date, status) { 
+        if(!attendance[studentId]) attendance[studentId]={}; 
+        attendance[studentId][date]=status; 
+        addNotification(`Attendance: ${students.find(s=>s.id===studentId)?.name} marked ${status} on ${date}`);
+        pushHistory(); saveState(); 
+      }
+      
+      function renderAll() {
+        renderDashboard(); renderStudentList(); renderWeekCalendar(); renderSubjectsAndHW(); renderAnnouncements(); renderProfileSelect(); updateBadge(); updateNotifBadge(); renderNotifications();
+        if(document.getElementById('analyticsView').classList.contains('active')) renderTrendChart();
+      }
+      
+      function drawAttChart() {
+        if (!document.getElementById('attChart')) return;
+        let present=0, absent=0; 
+        students.forEach(s=>{ let st = attendance[s.id]?.[getTodayStr()] || 'present'; st==='present'?present++:absent++; });
+        const ctx = document.getElementById('attChart').getContext('2d');
+        if (attChartInstance) attChartInstance.destroy();
+        attChartInstance = new Chart(ctx, {type:'doughnut', data:{labels:['Present','Absent'], datasets:[{data:[present,absent], backgroundColor:['#1E3E62','#FF6B35']}]}, options: { plugins: { tooltip: { enabled: true } } }});
+        document.getElementById('attRate').innerText = students.length ? Math.round(present/students.length*100)+'%' : '0%';
+        document.getElementById('chartCenterText').innerHTML = `${present} / ${absent}`;
+      }
+      
+      function updateBadge() {
+        let pending = assignments.filter(a=>!a.completed).length;
+        document.getElementById('pendingBadge').innerText = pending;
+      }
+      function updateNotifBadge() {
+        let unread = notifications.filter(n=>!n.read).length;
+        document.getElementById('notifCount').innerText = unread;
+      }
+      
+      function renderStudentList() {
+        const search = document.getElementById('studentSearch')?.value.toLowerCase()||'';
+        const filter = document.getElementById('attendanceFilter')?.value||'all';
+        let filtered = students.filter(s=> (s.name.toLowerCase().includes(search)||(s.country||'').toLowerCase().includes(search)));
+        if(filter!=='all') filtered = filtered.filter(s=> (attendance[s.id]?.[getTodayStr()]||'present') === filter);
+        const totalPages = Math.ceil(filtered.length/pageSize);
+        const start = (studentPage-1)*pageSize;
+        const pageItems = filtered.slice(start, start+pageSize);
+        let html = pageItems.map(s=> `<div class='student-row'><img src='${s.picture}' width=40 height=40 style='border-radius:40px' onerror="this.src='https://ui-avatars.com/api/?name=${s.name}'"><span style="flex:1">${s.name} (${s.country||''})</span><button data-id='${s.id}' class='detailBtn outline'>Details</button></div>`).join('');
+        document.getElementById('studentListContainer').innerHTML = html || '<p>No students</p>';
+        let pag = '';
+        for(let i=1;i<=totalPages;i++) pag+=`<button class="page-btn ${i===studentPage?'':'outline'}" data-page='${i}'>${i}</button>`;
+        document.getElementById('paginationControls').innerHTML = pag;
+        document.querySelectorAll('.detailBtn').forEach(b=> b.addEventListener('click', (e)=>{ showStudentModal(e.currentTarget.dataset.id); }));
+        document.querySelectorAll('.page-btn').forEach(b=> b.addEventListener('click', (e)=>{ studentPage=+e.currentTarget.dataset.page; renderStudentList(); }));
+      }
+      
+      function showStudentModal(id) {
+        let s = students.find(x=>x.id===id);
+        let hist = attendance[id]||{};
+        let histHtml = Object.entries(hist).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,st])=> `<div>${d}: ${st}</div>`).join('');
+        let pdfBtn = `<button class="outline small" id="genReportCard" data-id="${id}"><i class="fas fa-file-pdf"></i> Download Report Card (PDF)</button>`;
+        document.getElementById('modalBody').innerHTML = `<h4>${s.name}</h4><p>Email: ${s.email}</p><p>Country: ${s.country||''}</p><p>Bio: ${s.bio||'—'}</p><h5>Attendance history</h5>${histHtml}<div style="margin-top:16px">${pdfBtn}</div>`;
+        document.getElementById('studentModal').classList.add('active');
+        document.getElementById('genReportCard')?.addEventListener('click', ()=> generatePDF(id));
+      }
+      
+      function generatePDF(studentId) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const s = students.find(x=>x.id===studentId);
+        if(!s) return;
+        let presentCount = Object.values(attendance[studentId]||{}).filter(v=>v==='present').length;
+        let total = Object.keys(attendance[studentId]||{}).length;
+        let rate = total ? Math.round(presentCount/total*100) : 0;
+        doc.setFontSize(20); doc.text('EduNexus Report Card', 20, 30);
+        doc.setFontSize(14); doc.text(`Student: ${s.name} (${s.email})`, 20, 50);
+        doc.text(`Attendance: ${presentCount}/${total} days (${rate}%)`, 20, 70);
+        doc.save(`report_${s.name}.pdf`);
+        addNotification(`Report card generated for ${s.name}`);
+      }
+      
+      function renderWeekCalendar() {
+        const today = new Date(); today.setDate(today.getDate() + currentWeekOffset*7);
+        const start = new Date(today); start.setDate(today.getDate()-today.getDay()+1);
+        let days = []; for(let i=0;i<7;i++) { let d = new Date(start); d.setDate(start.getDate()+i); days.push(d.toISOString().slice(0,10)); }
+        document.getElementById('weekRange').innerText = `${days[0]} - ${days[6]}`;
+        let html = '<table><tr><th>Student</th>'+days.map(d=>'<th>'+d.slice(5)+'</th>').join('')+'</tr>';
+        students.forEach(s=> {
+          html+=`<tr><td>${s.name}</td>`;
+          days.forEach(date=> { let stat = attendance[s.id]?.[date] || 'present'; html+=`<td><button class="small ${stat==='present'?'':'outline'}" data-id="${s.id}" data-date="${date}" data-val="${stat==='present'?'absent':'present'}">${stat}</button></td>`; });
+          html+='</tr>';
+        });
+        document.getElementById('weekCalendar').innerHTML = html+'</table>';
+        document.querySelectorAll('[data-id][data-date]').forEach(b=> b.addEventListener('click', (e)=>{
+          let id=e.target.dataset.id, date=e.target.dataset.date, newVal=e.target.dataset.val;
+          markAttendance(id, date, newVal); renderWeekCalendar(); drawAttChart(); renderDashboard(); renderTrendChart();
+        }));
+      }
+      
+      function renderSubjectsAndHW() {
+        let subHtml = subjects.map(s=>`<div><strong>${s.name}</strong> — ${s.teacher||''} ${s.teacherEmail?'('+s.teacherEmail+')':''} <button data-del-sub="${s.id}" class="outline small">Del</button></div>`).join('');
+        document.getElementById('subjectsList').innerHTML = subHtml || '<p>No subjects</p>';
+        let teacherMap = {}; subjects.forEach(s => { if(s.teacher) teacherMap[s.teacher] = s.teacherEmail || ''; });
+        document.getElementById('teacherList').innerHTML = Object.entries(teacherMap).map(([n,e])=>`<div class="teacher-chip">👩‍🏫 ${n} ${e?'· '+e:''}</div>`).join('');
+        let select = document.getElementById('hwSubject');
+        select.innerHTML = '<option value="">Select subject</option>' + subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+        
+        let hwHtml = assignments.map(a=> {
+          let sub = subjects.find(s=>s.id===a.subjectId);
+          let attach = a.teacherAttachment ? `<span class="file-attach"><i class="fas fa-paperclip"></i> ${a.teacherAttachment.name}</span>` : '';
+          return `<div style="margin-bottom:10px"><input type="checkbox" ${a.completed?'checked':''} data-hw-id="${a.id}"> ${a.title} (${sub?.name||'?'}) due ${a.due} ${attach}<br>
+            <button class="outline small submitFileBtn" data-assign="${a.id}"><i class="fas fa-upload"></i> Submit file</button>
+            <input type="file" class="studentFileInput" data-assign="${a.id}" accept="*" style="display:none">
+          </div>`;
+        }).join('');
+        document.getElementById('assignmentsList').innerHTML = hwHtml || 'No assignments';
+        document.querySelectorAll('[data-del-sub]').forEach(btn => btn.addEventListener('click', e => {
+          let id = e.currentTarget.dataset.delSub; subjects = subjects.filter(s => s.id !== id); pushHistory(); saveState(); renderSubjectsAndHW(); toast('Subject removed');
+        }));
+        document.querySelectorAll('[data-hw-id]').forEach(cb=> cb.addEventListener('change', e=>{
+          let id=e.target.dataset.hwId; let a = assignments.find(x=>x.id===id); if(a) { a.completed=cb.checked; saveState(); updateBadge(); renderDashboard(); }
+        }));
+        document.querySelectorAll('.submitFileBtn').forEach(btn=> btn.addEventListener('click', (e)=>{
+          let assignId = e.currentTarget.dataset.assign;
+          let fileInput = e.currentTarget.nextElementSibling;
+          fileInput.click();
+          fileInput.onchange = (ev) => {
+            let file = ev.target.files[0]; if(!file) return;
+            let reader = new FileReader();
+            reader.onload = (re) => {
+              let assignment = assignments.find(a=>a.id===assignId);
+              if(assignment) {
+                if(!assignment.submissions) assignment.submissions = {};
+                let demoStudentId = students[0]?.id;
+                if(demoStudentId) {
+                  assignment.submissions[demoStudentId] = { fileName: file.name, dataURL: re.target.result, submittedAt: new Date().toISOString() };
+                  saveState(); toast(`File submitted for ${students[0].name}`); renderSubjectsAndHW();
+                  addNotification(`Assignment submission: ${assignment.title}`);
+                }
+              }
+            }; reader.readAsDataURL(file);
+          };
+        }));
+      }
+      
+      function renderAnnouncements() {
+        let sorted = [...announcements].sort((a,b)=> (b.pinned-a.pinned) || new Date(b.timestamp)-new Date(a.timestamp));
+        let html = sorted.map(a=> `<div class="announcement-item ${a.pinned?'pinned':''}"><div><strong>${a.title}</strong> <span class="small">${new Date(a.timestamp).toLocaleString()}</span><p>${a.content}</p></div></div>`).join('');
+        document.getElementById('announcementsListContainer').innerHTML = html || '<p>No announcements</p>';
+        let dashHtml = sorted.slice(0,3).map(a=>`<div><strong>${a.pinned?'📌 ':''}${a.title}</strong> - ${a.content.substring(0,40)}</div>`).join('');
+        document.getElementById('dashboardAnnouncements').innerHTML = dashHtml || '<p>No announcements</p>';
+      }
+      
+      function renderNotifications() {
+        let container = document.getElementById('notifListContainer');
+        let unread = notifications.filter(n=>!n.read);
+        let read = notifications.filter(n=>n.read).slice(0,10);
+        let allHtml = [...unread, ...read].map(n => 
+          `<div class="notification-item ${n.read ? '' : 'unread'}" data-id="${n.id}"><span>🔔 ${n.message} <span class="small" style="opacity:0.7;">${n.timestamp}</span></span><i class="fas fa-check-circle" style="color:var(--primary); opacity:0.6; font-size:0.9rem;"></i></div>`
+        ).join('');
+        container.innerHTML = allHtml || '<div class="notification-item">No notifications</div>';
+        document.querySelectorAll('.notification-item[data-id]').forEach(el=> el.addEventListener('click', (e)=>{
+          let id = e.currentTarget.dataset.id; let notif = notifications.find(n=>n.id===id); if(notif) { notif.read = true; saveState(); updateNotifBadge(); renderNotifications(); }
+        }));
+      }
+      
+      function renderProfileSelect() {
+        let select = document.getElementById('profileStudentSelect');
+        select.innerHTML = students.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+        if(students.length) renderProfileDetails(students[0].id);
+        select.onchange = ()=> renderProfileDetails(select.value);
+      }
+      function renderProfileDetails(studentId) {
+        let s = students.find(x=>x.id===studentId); if(!s) return;
+        let present = Object.values(attendance[s.id]||{}).filter(v=>v==='present').length;
+        let total = Object.keys(attendance[s.id]||{}).length;
+        let rate = total ? Math.round(present/total*100) : 0;
+        let subCount = assignments.filter(a=>a.submissions?.[s.id]).length;
+        let html = `<div class="user-card"><img src="${s.picture}" class="user-avatar" onerror="this.src='https://ui-avatars.com/api/?name=${s.name}'"><h3>${s.name}</h3><p>${s.email} · ${s.country||''}</p><p><strong>Bio:</strong> <span id="bioText">${s.bio||'No bio'}</span> <button id="editBioBtn" class="outline small"><i class="fas fa-pen"></i></button></p>
+        <p>📊 Attendance: ${present}/${total} (${rate}%) · 📎 Submissions: ${subCount}</p>
+        <button id="profileReportCard" class="outline"><i class="fas fa-file-pdf"></i> Download Report Card</button></div>`;
+        document.getElementById('profileDetails').innerHTML = html;
+        document.getElementById('editBioBtn').addEventListener('click', ()=>{
+          let newBio = prompt('Enter new bio:', s.bio||'');
+          if(newBio!==null) { s.bio = newBio; saveState(); renderProfileDetails(studentId); toast('Bio updated'); }
+        });
+        document.getElementById('profileReportCard').addEventListener('click', ()=> generatePDF(studentId));
+      }
+      
+      function renderDashboard() {
+        drawAttChart();
+        let absentCounts = {}; students.forEach(s=>{ let c=0; Object.values(attendance[s.id]||{}).forEach(v=>{ if(v==='absent')c++; }); absentCounts[s.id]=c; });
+        let sorted = students.slice().sort((a,b)=> absentCounts[b.id]-absentCounts[a.id]).slice(0,3);
+        document.getElementById('mostAbsentList').innerHTML = sorted.map(s=>`<div>${s.name}: ${absentCounts[s.id]} absences</div>`).join('');
+        let pending = assignments.filter(a=>!a.completed).slice(0,5);
+        document.getElementById('pendingAssignments').innerHTML = pending.map(a=>`<div>📌 ${a.title} (${a.due})</div>`).join('') || 'No pending';
+        renderAnnouncements();
+      }
+      
+      function toggleTheme() { document.body.classList.toggle('dark'); theme = theme==='light'?'dark':'light'; localStorage.setItem('theme',theme); }
+      
+      function updateCountdown() {
+        let now = new Date(); let [h,m] = classStartTime.split(':'); let target = new Date(); target.setHours(+h,+m,0);
+        if(now>target) target.setDate(target.getDate()+1);
+        let diff = target - now;
+        let hours = Math.floor(diff/3600000); let mins = Math.floor((diff%3600000)/60000); let secs = Math.floor((diff%60000)/1000);
+        document.getElementById('countdownDisplay').innerText = `${hours}h ${mins}m ${secs}s`;
+      }
+      
+      function renderTrendChart() {
+        if (!document.getElementById('trendChart')) return;
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (trendChartInstance) trendChartInstance.destroy();
+        
+        // generate last 7 days labels & present counts
+        let labels = [];
+        let presentData = [];
+        let absentData = [];
+        for (let i=6; i>=0; i--) {
+          let d = new Date(); d.setDate(d.getDate() - i);
+          let dateStr = d.toISOString().slice(0,10);
+          labels.push(dateStr.slice(5));
+          let pres = 0, abs = 0;
+          students.forEach(s => {
+            let st = attendance[s.id]?.[dateStr] || 'present';
+            st === 'present' ? pres++ : abs++;
+          });
+          presentData.push(pres);
+          absentData.push(abs);
+        }
+        
+        trendChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'Present', data: presentData, borderColor: '#1E3E62', backgroundColor: 'rgba(30,62,98,0.1)', tension: 0.2, fill: false },
+              { label: 'Absent', data: absentData, borderColor: '#FF6B35', backgroundColor: 'rgba(255,107,53,0.1)', tension: 0.2, fill: false }
+            ]
+          },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+
+      async function fetchRandomUser() {
+        document.getElementById('userLoading').style.display='block';
+        try {
+          const res = await fetch('https://randomuser.me/api/'); const data = await res.json();
+          const u = data.results[0];
+          currentRandomUser = { name: `${u.name.first} ${u.name.last}`, email: u.email, picture: u.picture.large, country: u.location.country };
+          document.getElementById('userPic').src=currentRandomUser.picture; document.getElementById('userPic').style.display='block';
+          document.getElementById('userName').textContent=currentRandomUser.name;
+          document.getElementById('userEmail').textContent=currentRandomUser.email;
+          document.getElementById('userLocation').textContent=`📍 ${currentRandomUser.country}`;
+        } catch(e) { toast('Error fetching user'); }
+        finally { document.getElementById('userLoading').style.display='none'; }
+      }
+      
+      function addRandomUserToClass() {
+        if(!currentRandomUser) { toast('Load a user first'); return; }
+        let id = 's'+Date.now();
+        let newS = { id, ...currentRandomUser, bio: '' };
+        students.push(newS); attendance[id] = { [getTodayStr()]: 'present' };
+        pushHistory(); saveState(); renderAll(); toast(`${newS.name} added to class!`);
+        addNotification(`New student ${newS.name} joined`);
+      }
+      
+      function init() {
+        loadState();
+        if(localStorage.getItem('theme')==='dark') toggleTheme();
+        renderAll();
+        setInterval(updateCountdown,1000);
+        document.getElementById('themeToggle').onclick = toggleTheme;
+        document.getElementById('undoBtn').onclick = undo; 
+        document.getElementById('redoBtn').onclick = redo;
+        document.getElementById('setCountdown').onclick = ()=>{ classStartTime = document.getElementById('classTimeInput').value; updateCountdown(); toast(`Countdown set to ${classStartTime}`); };
+        document.getElementById('exportBackupBtn').onclick = ()=>{ let blob=new Blob([JSON.stringify({students,attendance,subjects,assignments,announcements})],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='edunexus_backup.json'; a.click(); };
+        document.getElementById('bulkImportBtn').onclick = ()=> document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e)=>{ let file=e.target.files[0]; let r=new FileReader(); r.onload=ev=>{ try{ let d=JSON.parse(ev.target.result); students=d.students||[]; attendance=d.attendance||{}; subjects=d.subjects||[]; assignments=d.assignments||[]; announcements=d.announcements||[]; pushHistory(); renderAll(); toast('Imported successfully'); }catch{toast('Invalid JSON file');} }; r.readAsText(file); };
+        document.getElementById('addSubject').onclick = ()=>{ let n=document.getElementById('newSubject').value.trim(), t=document.getElementById('newTeacher').value.trim(), te=document.getElementById('newTeacherEmail').value.trim(); if(n){ subjects.push({id:Date.now()+'', name:n, teacher:t, teacherEmail:te}); pushHistory(); saveState(); renderSubjectsAndHW(); toast('Subject added'); } };
+        document.getElementById('addAssignment').onclick = ()=>{
+          let title=document.getElementById('hwTitle').value.trim(), due=document.getElementById('hwDue').value, subj=document.getElementById('hwSubject').value;
+          let fileInput = document.getElementById('hwTeacherFile'); let teacherAttachment = null;
+          if(fileInput.files.length>0) { let f=fileInput.files[0]; let reader=new FileReader(); reader.onload = (re)=>{ teacherAttachment={name:f.name, dataURL:re.target.result}; addAssignmentWithFile(title,due,subj,teacherAttachment); }; reader.readAsDataURL(f); } else { addAssignmentWithFile(title,due,subj,null); }
+        };
+        function addAssignmentWithFile(title,due,subj,attach) {
+          if(title && subj) { assignments.push({id:Date.now()+'', title, due, subjectId:subj, completed:false, teacherAttachment:attach, submissions:{}}); pushHistory(); saveState(); renderSubjectsAndHW(); renderDashboard(); document.getElementById('hwTitle').value=''; document.getElementById('hwDue').value=''; document.getElementById('hwTeacherFile').value=''; toast('Assignment added'); addNotification(`New assignment: ${title}`); }
+        }
+        document.getElementById('addAnnouncementBtn').onclick = ()=> document.getElementById('announcementModal').classList.add('active');
+        document.getElementById('saveAnnouncement').onclick = ()=>{
+          let title=document.getElementById('annTitle').value.trim(), content=document.getElementById('annContent').value.trim(), pinned=document.getElementById('annPinned').checked;
+          if(title && content) { announcements.push({id:Date.now()+'', title, content, timestamp:new Date().toISOString(), pinned}); pushHistory(); saveState(); renderAnnouncements(); document.getElementById('announcementModal').classList.remove('active'); toast('Announcement posted'); addNotification(`New announcement: ${title}`); }
+          else { toast('Title and content required'); }
+        };
+        
+        // Notification bell + mark all read
+        document.getElementById('notificationBell').addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('notifDropdown').classList.toggle('show'); });
+        document.addEventListener('click', (e) => { if (!e.target.closest('.notification-bell')) document.getElementById('notifDropdown').classList.remove('show'); });
+        document.getElementById('markAllReadBtn').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          notifications.forEach(n => n.read = true);
+          saveState(); updateNotifBadge(); renderNotifications();
+          toast('All notifications marked read');
+        });
+        
+        document.getElementById('hamburgerBtn').addEventListener('click', ()=> { document.getElementById('sidebar').classList.toggle('collapsed'); });
+        document.querySelectorAll('[data-view]').forEach(b=> b.addEventListener('click', (e)=>{
+          let view = e.currentTarget.dataset.view;
+          document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(view+'View').classList.add('active');
+          document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); e.currentTarget.classList.add('active');
+          document.getElementById('viewTitle').innerText = view.charAt(0).toUpperCase()+view.slice(1);
+          if(view==='students') renderStudentList(); 
+          if(view==='attendance') renderWeekCalendar();
+          if(view==='analytics') renderTrendChart(); 
+          if(view==='dashboard') drawAttChart();
+          if(view==='announcements') renderAnnouncements();
+          if(view==='studentProfile') { renderProfileSelect(); }
+          if(view==='randomUser' && !document.getElementById('userName').textContent) fetchRandomUser();
+          if(window.innerWidth <= 768) document.getElementById('sidebar').classList.add('collapsed');
+        }));
+        document.getElementById('loadRandomUserBtn').addEventListener('click', fetchRandomUser);
+        document.getElementById('addRandomToClassBtn').addEventListener('click', addRandomUserToClass);
+        window.addEventListener('keydown', e=>{ if(e.ctrlKey&&e.key==='z'){ e.preventDefault(); undo(); } if(e.ctrlKey&&e.key==='y'){ e.preventDefault(); redo(); } });
+        document.getElementById('exportChartPNG').onclick = ()=>{ let canvas=document.getElementById('trendChart'); if(canvas) { let a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='trend_chart.png'; a.click(); } };
+        document.getElementById('prevWeek').onclick=()=>{ currentWeekOffset--; renderWeekCalendar(); };
+        document.getElementById('nextWeek').onclick=()=>{ currentWeekOffset++; renderWeekCalendar(); };
+        document.getElementById('refreshProfileBtn').onclick = ()=> renderProfileDetails(document.getElementById('profileStudentSelect').value);
+      }
+      init();
+    })();
+  </script>
+</body>
+</html>
